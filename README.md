@@ -9,6 +9,7 @@ Why not write directly on the SQL statement?
 ## Example
 
 ```sql
+# raw sql
 select id, en from feed where status=1
 ```
 
@@ -19,8 +20,11 @@ import "github.com/zii/sqlroller"
 
 q, args := sqlroller.R(`select id, en from feed where status=1`).And("user_id=?", 1).String()
 fmt.Println(q, args)
+```
 
->>> select id, en from feed where status = 1 and user_id = ? [1]
+output:
+```sql
+select id, en from feed where status = 1 and user_id = ? [1]
 ```
 
 Custom orderby and limit:
@@ -29,9 +33,11 @@ Custom orderby and limit:
 q, args := sqlroller.R(`select id, en from feed where status=1`).And("user_id=?", 1).
 	OrderBy("id desc").Limit(0, 10).String()
 fmt.Println(q, args)
+```
 
->>> select g.en, count(distinct p.lang) as n from package as p join game as g on g.id = p.game_id where g.visible = 1 
-and g.genre = ? group by g.id limit 0, 10 [1]
+output:
+```sql
+select id, en from feed where status=1 and user_id=1 order by id desc limit 0,10 [1]
 ```
 
 ORM is difficult to handle multi table joint queries:
@@ -44,7 +50,13 @@ group by g.id`).And("g.genre=?", 1).Limit(0, 10).String()
 fmt.Println("q:", q, args)
 ```
 
-More practical example:
+output:
+```sql
+select g.en, count(distinct p.lang) as n from package as p join game as g on g.id = p.game_id where g.visible = 1
+and g.genre = ? group by g.id limit 0, 10 [1]
+```
+
+More practical usage:
 
 ```go
 import (
