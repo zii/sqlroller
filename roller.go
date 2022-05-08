@@ -99,6 +99,32 @@ func (this *SqlRoller) init(sql string, args ...interface{}) {
 	}
 }
 
+func (this *SqlRoller) findPlaceholder(q string) (int, string) {
+	i := strings.Index(q, ":")
+	if i < 0 {
+		return -1, ""
+	}
+	k := i
+	n := len(q)
+	i++
+	if i >= n {
+		return -1, ""
+	}
+	if q[i] != 'v' && q[i] != 'x' {
+		return -1, ""
+	}
+	i++
+	for ; i < n; i++ {
+		if q[i] == ' ' {
+			break
+		}
+		if q[i] < '0' || q[i] > '9' {
+			return -1, ""
+		}
+	}
+	return k, q[k:i]
+}
+
 func (this *SqlRoller) String() (string, []interface{}) {
 	var args []interface{}
 	sel2 := this.select2()
@@ -117,11 +143,19 @@ func (this *SqlRoller) String() (string, []interface{}) {
 		this.sel.SetLimit(this.limit)
 	}
 	q := sqlparser.String(this.sel)
-	for k, v := range this.arg_map {
-		q = strings.Replace(q, k, "?", 1)
-		args = append(args, v)
+	builder := strings.Builder{}
+	for q != "" {
+		i, h := this.findPlaceholder(q)
+		if i < 0 {
+			builder.WriteString(q)
+			break
+		}
+		builder.WriteString(q[:i])
+		builder.WriteString("?")
+		args = append(args, this.arg_map[h])
+		q = q[i+len(h):]
 	}
-	return q, args
+	return builder.String(), args
 }
 
 func R(raw string, args ...interface{}) *SqlRoller {

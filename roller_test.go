@@ -46,7 +46,7 @@ func Test1(_ *testing.T) {
 }
 
 func Test2(_ *testing.T) {
-	q, args := R(`select id, en from feed where status=1`).And("user_id=?", 1).String()
+	q, args := R(`select id, en from feed where status<?`, 2).And("user_id=?", 1).String()
 	fmt.Println("q:", q, args)
 }
 
@@ -83,4 +83,10 @@ func Test5(_ *testing.T) {
 		raise(err)
 		fmt.Println("row:", id, en, tr)
 	}
+}
+
+func Test6(_ *testing.T) {
+	r := &SqlRoller{}
+	i, p := r.findPlaceholder("aaa :v1 erer")
+	fmt.Println(i, p)
 }
