@@ -1,10 +1,12 @@
 package sqlroller
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func raise(err error) {
@@ -115,14 +117,52 @@ func (this *SqlRoller) findPlaceholder(q string) (int, string) {
 	}
 	i++
 	for ; i < n; i++ {
-		if q[i] == ' ' {
+		if q[i] == ' ' || q[i] == ')' {
 			break
 		}
 		if q[i] < '0' || q[i] > '9' {
 			return -1, ""
 		}
 	}
+	if i < k+2 {
+		return -1, ""
+	}
 	return k, q[k:i]
+}
+
+func (this *SqlRoller) matchPrevToken(s, token string) bool {
+	if token == "" {
+		return false
+	}
+	tn := len(token)
+	if len(s) < tn {
+		return false
+	}
+	// skip space
+	for i := len(s) - 1; i >= tn; i-- {
+		if s[i] != '(' && !unicode.IsSpace(rune(s[i])) {
+			break
+		}
+		s = s[:i]
+	}
+	if len(s) > tn && !unicode.IsSpace(rune(s[len(s)-tn-1])) {
+		return false
+	}
+	return strings.ToLower(s[len(s)-tn:]) == strings.ToLower(token)
+}
+
+func (this *SqlRoller) encodeInArg(v interface{}) string {
+	b, _ := json.Marshal(v)
+	if len(b) < 2 {
+		return string(b)
+	}
+	if b[0] == '[' {
+		b = b[1:]
+	}
+	if b[len(b)-1] == ']' {
+		b = b[:len(b)-1]
+	}
+	return string(b)
 }
 
 func (this *SqlRoller) String() (string, []interface{}) {
@@ -151,8 +191,15 @@ func (this *SqlRoller) String() (string, []interface{}) {
 			break
 		}
 		builder.WriteString(q[:i])
-		builder.WriteString("?")
-		args = append(args, this.arg_map[h])
+		v := this.arg_map[h]
+		in := this.matchPrevToken(q[:i], "in")
+		if in {
+			a := this.encodeInArg(v)
+			builder.WriteString(a)
+		} else {
+			builder.WriteString("?")
+			args = append(args, v)
+		}
 		q = q[i+len(h):]
 	}
 	return builder.String(), args

@@ -46,7 +46,7 @@ func Test1(_ *testing.T) {
 }
 
 func Test2(_ *testing.T) {
-	q, args := R(`select id, en from feed where status<?`, 2).And("user_id=?", 1).String()
+	q, args := R(`select id, en from feed where status<?`, 2).And("name in (?)", []string{"a", "cat"}).String()
 	fmt.Println("q:", q, args)
 }
 
@@ -89,4 +89,10 @@ func Test6(_ *testing.T) {
 	r := &SqlRoller{}
 	i, p := r.findPlaceholder("aaa :v1 erer")
 	fmt.Println(i, p)
+}
+
+func Test7(_ *testing.T) {
+	r := &SqlRoller{}
+	ok := r.matchPrevToken("a like \n 	", "LIKE")
+	fmt.Println("match:", ok)
 }
